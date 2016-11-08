@@ -1,5 +1,5 @@
 学籍番号 61414050
-丹羽直也
+丹羽直也 にわなおや
 
 課題 1
 
@@ -10,3 +10,151 @@ ua001968 19338  0.0  0.0 109688  1116 pts/0    R+   20:30   0:00 ps u
 
 自分が使ってるシェル: bash
 そのプロセスID: 19282
+
+課題 2
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+int main()
+{
+  printf("pid: %d\n", getpid());
+  printf("ppid: %d\n", getppid());
+  return 0;
+}
+
+出力結果
+pid: 23945
+ppid: 23666
+
+
+課題 3
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+int main()
+{
+  int pid;
+  if ((pid = fork()) != 0) {
+    printf("parent: pid = %d, ppid = %d\n", getpid(), getppid());
+  } else {
+    printf("child: pid = %d, ppid = %d\n", getpid(), getppid());
+  }
+  return 0;
+}
+
+
+出力結果
+parent: pid = 24136, ppid = 23666
+child: pid = 24137, ppid = 24136
+
+課題 4
+
+"ls" を実行するプログラム
+
+#include <unistd.h>
+
+int main()
+{
+  char *eargv[] = { "ls", NULL };
+  execvp(eargv[0], eargv);
+  return 0;
+}
+
+
+実行結果
+a.out  p2.c  p3.c  p4-1.c  report.txt
+
+"ls -l" を実行するプログラム
+
+#include <unistd.h>
+
+int main()
+{
+  char *eargv[] = { "ls", "-l", NULL };
+  execvp(eargv[0], eargv);
+  return 0;
+}
+
+実行結果
+合計 48
+-rwxr-xr-x 1 ua001968 users 6450 11月  8 15:16 2016 a.out
+-rw-r--r-- 1 ua001968 users  159 11月  8 14:47 2016 p2.c
+-rw-r--r-- 1 ua001968 users  277 11月  8 15:02 2016 p3.c
+-rw-r--r-- 1 ua001968 users  110 11月  8 15:16 2016 p4-1.c
+-rw-r--r-- 1 ua001968 users  116 11月  8 15:16 2016 p4-2.c
+-rw-r--r-- 1 ua001968 users  333 11月  8 14:44 2016 report.txt
+
+課題 5
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#define MAX_LINE 256
+
+void getargs(char*, int, int*, char**);
+
+int main()
+{
+  char line[MAX_LINE];
+  while (1) {
+    printf("%% ");
+    fflush(stdout);
+    if (fgets(line, MAX_LINE, stdin) == NULL) {
+      fprintf(stderr, "Input error when fgets.\n");
+      return 1;
+    }
+    int argc;
+    char *argv[MAX_LINE];
+    int pid;
+    if ((pid = fork()) != 0) {
+      int status;
+      wait(&status);
+    } else {
+      getargs(line, MAX_LINE, &argc, argv);
+      argv[argc] = NULL;
+      execvp(argv[0], argv);
+    }
+  }
+  return 0;
+}
+
+char *skipcs = " \n\t";
+
+void
+getargs(char *input, int max, int *argc, char *argv[])
+{
+  int i;
+  *argc = 0;
+  int npos = 0, prev_skip = 1;
+  for (i = 0; i < max; i++) {
+    if (input[i] == '\0') {
+      if (prev_skip == 0) {
+        argv[(*argc)++] = input + npos;
+      }
+      break;
+    }
+    int skip = 0, j;
+    for (j = 0; skipcs[j] != '\0'; j++) {
+      if (input[i] == skipcs[j]) {
+        skip = 1;
+        break;
+      }
+    }
+    if (skip != 0 && prev_skip == 0) {
+      argv[(*argc)++] = input + npos;
+      input[i] = '\0';
+    } else if (skip == 0 && prev_skip != 0) {
+      npos = i;
+    }
+    prev_skip = skip;
+  }
+}
+
+
+
