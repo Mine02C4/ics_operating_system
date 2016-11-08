@@ -1,0 +1,12 @@
+学籍番号 61414050
+丹羽直也
+
+課題 1
+
+$ ps u
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+ua001968 19282  0.0  0.0 112112  2064 pts/0    Ss   20:30   0:00 -bash
+ua001968 19338  0.0  0.0 109688  1116 pts/0    R+   20:30   0:00 ps u
+
+自分が使ってるシェル: bash
+そのプロセスID: 19282
