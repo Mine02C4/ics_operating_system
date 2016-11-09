@@ -6,6 +6,7 @@ int main()
 {
   int pid;
   if ((pid = fork()) != 0) {
+    printf("parent: pid = %d\n", getpid());
     sleep(1);
     printf("parent: finish\n");
   } else {
