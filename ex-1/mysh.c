@@ -9,7 +9,8 @@
 void getargs(char*, int, int*, char**);
 const char *getenv(const char *[], const char *);
 
-int main(const int margc, const char *margv[], const char *menvp[])
+int
+main(const int margc, const char *margv[], const char *menvp[])
 {
   char line[MAX_LINE];
   while (1) {
@@ -95,7 +96,8 @@ getargs(char *input, int max, int *argc, char *argv[])
   }
 }
 
-const char *getenv(const char *envp[], const char *key)
+const char *
+getenv(const char *envp[], const char *key)
 {
   int i, j;
   for (i = 0; envp[i] != NULL; i++) {
