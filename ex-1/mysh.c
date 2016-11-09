@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -6,8 +7,9 @@
 #define MAX_LINE 256
 
 void getargs(char*, int, int*, char**);
+const char *getenv(const char *[], const char *);
 
-int main()
+int main(const int margc, const char *margv[], const char *menvp[])
 {
   char line[MAX_LINE];
   while (1) {
@@ -19,13 +21,42 @@ int main()
     }
     int argc;
     char *argv[MAX_LINE];
+    getargs(line, MAX_LINE, &argc, argv);
+    if (argc == 0) {
+      continue;
+    }
+    if (strcmp(argv[0], "cd") == 0) {
+      if (argc > 1) {
+        chdir(argv[1]);
+      } else {
+        const char *home = getenv(menvp, "HOME");
+        printf("%s\n", home);
+        chdir(home);
+      }
+      continue;
+    }
+    if (strcmp(argv[0], "exit") == 0) {
+      return 0;
+    }
+    int background = 0;
+    if (argv[argc - 1][strlen(argv[argc - 1]) - 1] == '&') {
+      background = 1;
+      if (strlen(argv[argc - 1]) == 1) {
+        argv[argc - 1] = NULL;
+      } else {
+        argv[argc - 1][strlen(argv[argc - 1]) - 1] = '\0';
+        argv[argc] = NULL;
+      }
+    } else {
+      argv[argc] = NULL;
+    }
     int pid;
     if ((pid = fork()) != 0) {
-      int status;
-      wait(&status);
+      if (background == 0) {
+        int status;
+        wait(&status);
+      }
     } else {
-      getargs(line, MAX_LINE, &argc, argv);
-      argv[argc] = NULL;
       execvp(argv[0], argv);
     }
   }
@@ -62,5 +93,28 @@ getargs(char *input, int max, int *argc, char *argv[])
     }
     prev_skip = skip;
   }
+}
+
+const char *getenv(const char *envp[], const char *key)
+{
+  int i, j;
+  for (i = 0; envp[i] != NULL; i++) {
+    const char *val = NULL;
+    int n = 0;
+    for (j = 0; envp[j] != '\0'; j++) {
+      if (envp[i][j] == '=') {
+        val = &envp[i][j + 1];
+        n = j;
+        break;
+      }
+    }
+    if (val == NULL) {
+      break;
+    }
+    if (strncmp(envp[i], key, n) == 0) {
+      return val;
+    }
+  }
+  return NULL;
 }
 
