@@ -230,3 +230,84 @@ getenv(const char *envp[], const char *key)
 目的である、シェルのカレントディレクトリの変更にはならない。
 そのためシェル自身がforkせずにchdirを呼び出す必要がある。
 
+課題 8
+
+プロセスはそのプロセス自体のメモリ領域とは別に、OS(カーネル)がプロセス自体を管理するための
+例えばプロセスIDやファイルハンドラ、状態などのメタ情報があって成立している。
+プロセス自体が終了したとしても、本来は親プロセスがその終了状態がどうであったかなどを、
+waitで得るために、即座にメタ状態を破棄することはできない。
+そのため、プロセス自体のメモリ領域を捨てたとしても、
+メタ情報は残ることになる。
+waitシステムコールはこのメタ情報を読むとともに破棄して、
+プロセスを完全に終了させる。
+これが実行されておらず、メタ情報が消されていないのがゾンビプロセスである。
+上記の通り、子プロセスを呼び出したあとwaitを呼ばないと、子プロセスが終了後にゾンビプロセスになる。
+なお、親プロセスが終了した際には通常はゾンビプロセスとなった子プロセスをカーネルが消す。
+
+ゾンビプロセスを発生させるプログラム
+
+#include <stdio.h>
+#include <unistd.h>
+
+int main()
+{
+  int pid;
+  if ((pid = fork()) != 0) {
+    getchar();
+    printf("parent: finish\n");
+  } else {
+    printf("child: finish\n");
+  }
+  return 0;
+}
+
+getcharで入力待ちの間にサブプロセス側がゾンビプロセスになります。
+
+psの結果
+
+$ ps u
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+ua001968 15066  0.0  0.0 112112  2088 pts/4    Ss   19:29   0:00 -bash
+ua001968 15116  0.0  0.0 126248  1272 pts/4    S+   19:29   0:00 screen
+ua001968 15118  0.0  0.0 108256  2428 pts/5    Ss   19:29   0:00 /bin/bash
+ua001968 15143  0.0  0.0 112468  2376 pts/6    Ss   19:29   0:00 /bin/bash
+ua001968 17062  0.0  0.0   3924   396 pts/6    S+   20:36   0:00 ./a.out
+ua001968 17063  0.0  0.0      0     0 pts/6    Z+   20:36   0:00 [a.out] <defunct>
+ua001968 17064  0.0  0.0 109696  1124 pts/5    R+   20:36   0:00 ps u
+
+課題 9
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+int main()
+{
+  int pid;
+  if ((pid = fork()) != 0) {
+    printf("parent: pid = %d\n", getpid());
+    sleep(1);
+    printf("parent: finish\n");
+  } else {
+    printf("child: ppid = %d\n", getppid());
+    sleep(2);
+    printf("child: ppid = %d\n", getppid());
+    printf("child: finish\n");
+  }
+  return 0;
+}
+
+実行結果
+
+[ua001968@logex02 ex-1]$ ./a.out 
+parent: pid = 17322
+child: ppid = 17322
+parent: finish
+[ua001968@logex02 ex-1]$ child: ppid = 1
+child: finish
+
+親プロセスが消えたため、bashのプロンプトが混ざっているがそのまま載せた。
+
+親プロセスが動いている間は、通常通りforkで生成された子プロセスのppidは
+生成元のプロセスを指しているが、親プロセスが終了するとppid = 1となり、
+PID = 1のプロセス、すなわち /sbin/init を指すようになる。
