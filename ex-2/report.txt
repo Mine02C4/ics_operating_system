@@ -1,0 +1,96 @@
+61414050 丹羽直也
+
+課題1
+1. "Thread A"、"Thread B"の出力が、ある程度連続して切り替わりながら出力された。
+Thread A 23行、Thread B 15行、Thread A 32行…
+のように行数はまちまちである。
+
+2. 3つ (mainスレッドと作ったスレッド2つ)
+
+3.
+変数のscopeはその変数が、ソースコード上のどこから参照できるのかを示す語である。
+その形態はプログラミング言語によって様々であり、例えばC言語のグローバル変数は
+プリプロセス後に同一のファイルになる範囲で参照可能であるが、ブロック内で宣言される
+ローカル変数はそのブロックの内側でのみ参照可能である。
+言語によってはスレッドローカルと言った、スレッド毎に参照可能といったものもある。
+変数のextentはその変数が、時間的にどの範囲で参照可能かを示す語である。
+こちらもプログラミング言語によって様々であり、C言語のグローバル変数はプログラムが実行中
+いつでも参照できるが、ローカル変数はそのブロックに入ってから出るまでしか参照できない。
+(すなわち、ローカル変数へのポインタをブロックの外まで保持し続けていると想定してない挙動をする)
+一方、GC(ガーベージコレクション)を持っていることを前提としたJavaScriptなどでは、
+参照が保持されている間がextentという言語もある。
+
+課題2
+1. "Thread (0)"、"Thread (1)"の出力が、ある程度連続して切り替わりながら出力された。
+課題1-1と同様にその行数はまちまちであった。
+
+2.
+#include <stdio.h>
+#include <pthread.h>
+
+void *thread(void *arg)
+{
+  for (;;)
+    printf("Thread (%f)\n", *(double*)arg);
+  return NULL;
+}
+
+int main()
+{
+  pthread_t a, b;
+  double arg_a = 3.14, arg_b = 2.71;
+
+  pthread_create(&a, NULL, thread, &arg_a);
+  pthread_create(&b, NULL, thread, &arg_b);
+
+  pthread_join(a, NULL);
+  pthread_join(b, NULL);
+
+  return 0;
+}
+
+3.
+#include <stdio.h>
+#include <pthread.h>
+
+void *thread(void *arg)
+{
+  for (;;)
+    printf("Thread (%s)\n", (char*)arg);
+  return NULL;
+}
+
+int main()
+{
+  pthread_t a, b;
+  char *arg_a = "I am a boy", *arg_b = "I am a girl";
+
+  pthread_create(&a, NULL, thread, arg_a);
+  pthread_create(&b, NULL, thread, arg_b);
+
+  pthread_join(a, NULL);
+  pthread_join(b, NULL);
+
+  return 0;
+}
+
+4.
+pthread_joinに渡す値が異なっており、そのままではすぐ終了してしまう。おそらく20行目は
+pthread_join(t[i], NULL);
+のつもりだったと推測。
+その修正を施して実行したところ、1つだけ
+Thread (1)
+が実行された後、ずっと
+Thread (0)
+が出力され続けた。 thread 関数にpthread_create経由で渡したのは、main内のi変数へのポインタであり、
+pthread_createの直後、17行目で2個目のスレッドを立てている間は1、そのループを抜ける時には2となっている。
+タイミング的にその瞬間でthread内のprintfが実行されたらその値が出る。
+タイミング次第では2が出ることもあり得るし、いきなり0になる可能性もあるがそれはOS次第である。
+19行目のループ内、20行目の thread_join で1つ目のスレッドの終了を待っている間は、for内の1つめの初期化部で
+iが0に初期化されており、どちらのスレッドでも0が表示される。どちらのスレッドも無限ループなので、
+pthread_joinが返ってくることはなく、外から終了させるまでずっと0が表示される。
+
+3.
+count = 0
+が出力された。
+
